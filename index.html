@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Win or Lose: Academic Vocabulary Quiz Show</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka+One&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Chakra+Petch:wght@700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      background: radial-gradient(ellipse at top, #1e1b4b 0%, #0f172a 45%, #020617 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .font-arcade { font-family: 'Bungee', cursive; }
+    .font-game { font-family: 'Fredoka One', cursive; }
+    .font-hud { font-family: 'Chakra Petch', sans-serif; }
+
+    /* Glow Effects */
+    .glow-gold {
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), inset 0 0 15px rgba(251, 191, 36, 0.2);
+    }
+    .glow-red {
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(248, 113, 113, 0.2);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.4), inset 0 0 12px rgba(34, 211, 238, 0.2);
+    }
+
+    /* Option Buzzer Dynamics */
+    .quiz-option-btn {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.6), 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    }
+    .quiz-option-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 rgba(0, 0, 0, 0.6), 0 14px 20px -3px rgba(0, 0, 0, 0.6);
+    }
+    .quiz-option-btn:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Win / Lose Animation States */
+    @keyframes correctBounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    .btn-win {
+      background: linear-gradient(135deg, #15803d 0%, #16a34a 100%) !important;
+      border-color: #86efac !important;
+      color: #ffffff !important;
+      animation: correctBounce 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes shakeLose {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-9px); }
+      40%, 80% { transform: translateX(9px); }
+    }
+    .btn-lose {
+      background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%) !important;
+      border-color: #fca5a5 !important;
+      color: #ffffff !important;
+      animation: shakeLose 0.4s ease-in-out;
+    }
+
+    /* Neon Bulbs */
+    @keyframes bulbPulse {
+      0%, 100% { opacity: 0.35; filter: drop-shadow(0 0 2px #facc15); }
+      50% { opacity: 1; filter: drop-shadow(0 0 10px #fde047); }
+    }
+    .bulb { animation: bulbPulse 1.3s infinite ease-in-out; }
+    .bulb:nth-child(even) { animation-delay: 0.65s; }
+
+    /* Custom print layout */
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      header, main, #start-modal, #phase-transition-modal { display: none !important; }
+      #game-over-modal { position: static !important; display: block !important; background: transparent !important; box-shadow: none !important; border: 1px solid #000 !important; }
+      button { display: none !important; }
+    }
+  </style>
+</head>
+<body class="text-slate-100 flex flex-col justify-between p-2.5 sm:p-4 select-none">
+
+  <!-- Top Television Studio Bar -->
+  <header class="max-w-5xl w-full mx-auto bg-slate-900/95 backdrop-blur-md border-2 border-amber-400/50 rounded-3xl p-3 sm:p-4 shadow-2xl mb-3 glow-gold relative z-20">
+    
+    <!-- Marquee Banner -->
+    <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 mb-2 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 bulb"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-400 bulb"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 bulb"></span>
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 bulb"></span>
+        <span class="font-arcade tracking-widest text-amber-300 ml-1">WIN OR LOSE ARENA</span>
+        <span class="text-slate-500 hidden sm:inline">|</span>
+        <span class="text-amber-400 font-bold hidden sm:inline">Academic Designer: Muhammad Shahzad</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleAudio()" id="audio-toggle-btn" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold border border-slate-700 transition">
+          <span id="audio-toggle-icon">🔊 Sound ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Contestant Profile & Scoreboard -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Identity Tag -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-3xl shadow-lg border-2 border-amber-200">
+          🎯
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-xl font-black font-arcade text-amber-300 tracking-wider">
+              WIN OR LOSE QUIZ
+            </h1>
+            <span id="hud-phase-pill" class="px-2.5 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 rounded-full text-[11px] font-bold uppercase tracking-wider font-hud">
+              PHASE 1: CONTEXT GAP-FILL
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 mt-0.5">
+            Contestant: <strong id="hud-student-name" class="text-amber-400 font-game text-sm">Contestant</strong> 
+            <span class="text-slate-500">•</span>
+            Group: <strong id="hud-student-group" class="text-cyan-300 font-game text-sm">Group 1</strong>
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Counters -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="bg-slate-950/85 px-3 py-1.5 rounded-2xl border border-slate-800 text-center min-w-[75px]">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider font-hud">Score</span>
+          <span id="hud-score" class="font-hud font-black text-lg sm:text-2xl text-amber-400">0</span>
+        </div>
+        <div class="bg-slate-950/85 px-3 py-1.5 rounded-2xl border border-slate-800 text-center min-w-[70px]">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider font-hud">Streak</span>
+          <span id="hud-streak" class="font-hud font-black text-lg sm:text-2xl text-emerald-400">0x</span>
+        </div>
+        <div class="bg-slate-950/85 px-3 py-1.5 rounded-2xl border border-slate-800 text-center min-w-[75px]">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider font-hud">Strikes</span>
+          <span id="hud-lives" class="font-black text-sm sm:text-base text-rose-500">❤️❤️❤️</span>
+        </div>
+        <div class="bg-slate-950/85 px-3 py-1.5 rounded-2xl border border-slate-800 text-center min-w-[70px]">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider font-hud">Round</span>
+          <span id="hud-round-count" class="font-hud font-black text-lg sm:text-2xl text-cyan-400">1 / 10</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question Countdown Bar -->
+    <div class="mt-3">
+      <div class="flex justify-between items-center text-[11px] font-bold font-hud text-slate-300 mb-1">
+        <span class="flex items-center gap-1.5">⏱️ TIME REMAINING: <span id="timer-sec-label" class="text-amber-400 text-sm">25s</span></span>
+        <span id="speed-bonus-tag" class="text-cyan-300 font-bold">Quick Answer Bonus: +50 PTS</span>
+      </div>
+      <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+        <div id="countdown-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 transition-all duration-300" style="width: 100%;"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Stage Quiz Area -->
+  <main class="max-w-5xl w-full mx-auto flex-1 flex flex-col justify-center relative">
+    
+    <!-- Central Spotlight Question Card -->
+    <div class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl p-4 sm:p-6 shadow-2xl relative glow-gold text-center mb-3">
+      
+      <div class="flex items-center justify-between mb-2">
+        <span id="clue-badge" class="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-full text-xs font-bold uppercase tracking-wider font-hud">
+          Target Clue 1 of 10
+        </span>
+        <span id="reward-points-badge" class="text-xs font-black text-emerald-400 font-hud tracking-wider">
+          +100 PTS ON WIN
+        </span>
+      </div>
+
+      <!-- Phase 2 Visual Concept Container (Displayed only during Phase 2) -->
+      <div id="visual-illustration-container" class="hidden mb-2 flex flex-col items-center justify-center">
+        <div id="illustration-graphic" class="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl bg-slate-950/80 border-2 border-cyan-400/50 p-2 shadow-inner flex items-center justify-center">
+          <!-- SVG injected dynamically -->
+        </div>
+        <span id="illustration-caption" class="text-[11px] sm:text-xs text-cyan-300 font-bold mt-1 tracking-wider uppercase font-hud">
+          Visual Clue
+        </span>
+      </div>
+
+      <h2 id="question-prompt-text" class="text-lg sm:text-2xl md:text-3xl font-black text-amber-200 font-game px-2 py-2 leading-relaxed min-h-[70px] flex items-center justify-center">
+        "Loading Win or Lose challenge..."
+      </h2>
+
+      <div id="sub-hint-label" class="text-xs sm:text-sm text-cyan-300 font-semibold bg-slate-950/70 py-1.5 px-4 rounded-xl inline-block border border-cyan-500/30">
+        Choose the matching target academic word
+      </div>
+    </div>
+
+    <!-- 4 Option Buzzers (2x2 Grid) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl mx-auto w-full" id="quiz-buzzers-grid">
+      
+      <!-- Option A -->
+      <button onclick="handleOptionSelect(0)" id="option-btn-0" class="quiz-option-btn p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 border-2 border-cyan-400/50 rounded-2xl text-left flex items-center gap-3 transition">
+        <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-black font-arcade text-base sm:text-lg flex items-center justify-center shrink-0">
+          A
+        </span>
+        <span class="text-sm sm:text-lg font-bold font-game text-white tracking-wide truncate" id="option-label-0">
+          Option A
+        </span>
+      </button>
+
+      <!-- Option B -->
+      <button onclick="handleOptionSelect(1)" id="option-btn-1" class="quiz-option-btn p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 border-2 border-amber-400/50 rounded-2xl text-left flex items-center gap-3 transition">
+        <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/40 font-black font-arcade text-base sm:text-lg flex items-center justify-center shrink-0">
+          B
+        </span>
+        <span class="text-sm sm:text-lg font-bold font-game text-white tracking-wide truncate" id="option-label-1">
+          Option B
+        </span>
+      </button>
+
+      <!-- Option C -->
+      <button onclick="handleOptionSelect(2)" id="option-btn-2" class="quiz-option-btn p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 border-2 border-fuchsia-400/50 rounded-2xl text-left flex items-center gap-3 transition">
+        <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-400/40 font-black font-arcade text-base sm:text-lg flex items-center justify-center shrink-0">
+          C
+        </span>
+        <span class="text-sm sm:text-lg font-bold font-game text-white tracking-wide truncate" id="option-label-2">
+          Option C
+        </span>
+      </button>
+
+      <!-- Option D -->
+      <button onclick="handleOptionSelect(3)" id="option-btn-3" class="quiz-option-btn p-3.5 sm:p-4 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 border-2 border-emerald-400/50 rounded-2xl text-left flex items-center gap-3 transition">
+        <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-black font-arcade text-base sm:text-lg flex items-center justify-center shrink-0">
+          D
+        </span>
+        <span class="text-sm sm:text-lg font-bold font-game text-white tracking-wide truncate" id="option-label-3">
+          Option D
+        </span>
+      </button>
+    </div>
+
+    <!-- Feedback Flash Toast -->
+    <div id="live-feedback-toast" class="mt-2 text-center transition-all duration-300 min-h-[28px] font-bold text-sm"></div>
+  </main>
+
+  <!-- Start & Registration Modal -->
+  <div id="start-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border-4 border-amber-400 max-w-lg w-full rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-3.5 glow-gold relative max-h-[95vh] overflow-y-auto">
+      
+      <div class="text-4xl animate-bounce">⚡</div>
+
+      <h2 class="text-2xl sm:text-3xl font-black font-arcade text-amber-300 tracking-wider">
+        WIN OR LOSE QUIZ!
+      </h2>
+      <p class="text-xs sm:text-sm text-cyan-300 font-semibold">
+        3-Phase Academic Vocabulary Championship
+      </p>
+
+      <!-- Attribution Banner -->
+      <div class="bg-slate-950 p-2.5 rounded-2xl border border-amber-500/40 space-y-0.5">
+        <span class="text-[10px] uppercase font-bold text-slate-400 font-hud tracking-widest block">Academic Designer & Resource Person:</span>
+        <p class="text-sm sm:text-base font-black text-amber-300 font-game">
+          Designed by Muhammad Shahzad
+        </p>
+      </div>
+
+      <!-- 3 Phases Roadmap -->
+      <div class="grid grid-cols-3 gap-2 text-left text-xs pt-1">
+        <div class="bg-slate-950/80 p-2 rounded-xl border border-cyan-500/40">
+          <span class="text-[9px] font-bold text-cyan-300 uppercase block font-hud">Phase 1 (10 Qs)</span>
+          <span class="text-slate-300 font-semibold text-[10px] leading-tight block mt-0.5">Context Gap-Fill</span>
+        </div>
+        <div class="bg-slate-950/80 p-2 rounded-xl border border-amber-500/40">
+          <span class="text-[9px] font-bold text-amber-300 uppercase block font-hud">Phase 2 (10 Qs)</span>
+          <span class="text-slate-300 font-semibold text-[10px] leading-tight block mt-0.5">Image Matching</span>
+        </div>
+        <div class="bg-slate-950/80 p-2 rounded-xl border border-emerald-500/40">
+          <span class="text-[9px] font-bold text-emerald-300 uppercase block font-hud">Phase 3 (10 Qs)</span>
+          <span class="text-slate-300 font-semibold text-[10px] leading-tight block mt-0.5">Synonyms & Antonyms</span>
+        </div>
+      </div>
+
+      <!-- Target Word Bank Display -->
+      <div class="bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800 text-left text-xs space-y-1">
+        <span class="text-[10px] uppercase font-bold text-amber-400 font-hud tracking-wider block">10 Target Academic Words:</span>
+        <p class="text-slate-300 font-mono text-[11px] leading-relaxed">
+          objective • comfort • renewable • ecological • vital • awareness • landmark • spiritual • enriching • official
+        </p>
+      </div>
+
+      <!-- Registration Inputs -->
+      <div class="space-y-2.5 text-left">
+        <div>
+          <label for="input-contestant-name" class="text-xs uppercase font-bold text-amber-400 tracking-wider block font-hud mb-1">
+            Contestant / Student Name: <span class="text-rose-400">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="input-contestant-name" 
+            placeholder="e.g. Salim Al-Harthy" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-bold placeholder-slate-500 focus:outline-none focus:border-amber-400 transition text-sm"
+          >
+        </div>
+
+        <div>
+          <label for="input-contestant-group" class="text-xs uppercase font-bold text-cyan-400 tracking-wider block font-hud mb-1">
+            Class Section / Group: <span class="text-rose-400">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="input-contestant-group" 
+            placeholder="e.g. Group 14 (GE3)" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-bold placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition text-sm"
+          >
+        </div>
+
+        <!-- Timer Duration Select -->
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block font-hud mb-1">
+            ⏱️ Question Timer Pacing:
+          </label>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <button type="button" onclick="setTimerPacing(35, this)" class="pacing-btn py-2 bg-slate-950 hover:bg-slate-800 rounded-xl border border-slate-700 font-bold text-slate-300 transition">
+              Relaxed <span class="block text-[9px] text-slate-500 font-normal">35s</span>
+            </button>
+            <button type="button" onclick="setTimerPacing(25, this)" class="pacing-btn py-2 bg-amber-500/20 border-amber-400 text-amber-300 rounded-xl border font-bold transition">
+              Standard <span class="block text-[9px] text-amber-300 font-normal">25s</span>
+            </button>
+            <button type="button" onclick="setTimerPacing(15, this)" class="pacing-btn py-2 bg-slate-950 hover:bg-slate-800 rounded-xl border border-slate-700 font-bold text-slate-300 transition">
+              Lightning <span class="block text-[9px] text-slate-500 font-normal">15s</span>
+            </button>
+          </div>
+        </div>
+
+        <p id="reg-warning" class="text-[11px] text-rose-400 font-bold hidden text-center">
+          ⚠️ Please type both your Name and Group to enter the stage!
+        </p>
+      </div>
+
+      <button onclick="startQuizShow()" class="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-600 hover:from-amber-300 hover:to-yellow-500 text-slate-950 font-black text-base sm:text-lg rounded-2xl shadow-xl transition active:scale-95 font-hud tracking-wider">
+        TAKE THE STAGE ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- Phase Transition Checkpoint Modal -->
+  <div id="phase-transition-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border-4 border-cyan-400 max-w-lg w-full rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-4 glow-cyan">
+      <div class="text-5xl animate-bounce">⚡</div>
+      
+      <span class="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 rounded-full text-xs font-bold uppercase tracking-widest inline-block font-hud" id="trans-badge">
+        Checkpoint Cleared!
+      </span>
+
+      <h2 id="trans-title" class="text-2xl sm:text-3xl font-black font-arcade text-cyan-300">
+        Phase 1 Complete!
+      </h2>
+
+      <!-- Candidate Verification Box -->
+      <div class="bg-slate-950 px-4 py-2.5 rounded-2xl border border-slate-800 grid grid-cols-2 gap-2 text-left text-xs">
+        <div>
+          <span class="text-slate-400 uppercase font-bold block text-[10px] font-hud">Contestant</span>
+          <strong id="trans-contestant-name" class="text-amber-300 text-sm font-game">Salim Al-Harthy</strong>
+        </div>
+        <div>
+          <span class="text-slate-400 uppercase font-bold block text-[10px] font-hud">Assigned Group</span>
+          <strong id="trans-contestant-group" class="text-cyan-300 text-sm font-game">Group 14</strong>
+        </div>
+      </div>
+
+      <!-- Score Box -->
+      <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 grid grid-cols-2 gap-3 text-left">
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-cyan-500/30">
+          <span class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block font-hud" id="trans-phase-label">Phase 1 Score</span>
+          <p id="trans-phase-score" class="text-xl sm:text-2xl font-black font-hud text-cyan-300">0 pts</p>
+        </div>
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-emerald-500/30">
+          <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block font-hud">Running Total</span>
+          <p id="trans-total-score" class="text-xl sm:text-2xl font-black font-hud text-emerald-300">0 pts</p>
+        </div>
+      </div>
+
+      <p id="trans-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed"></p>
+
+      <button onclick="startNextPhase()" id="btn-next-phase" class="w-full py-3.5 bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 font-black text-base sm:text-lg rounded-2xl shadow-xl transition active:scale-95 font-hud">
+        START NEXT PHASE ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- Final Score & Verification Report Modal -->
+  <div id="game-over-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border-4 border-amber-400 max-w-xl w-full rounded-3xl p-5 sm:p-7 text-center shadow-2xl space-y-4 max-h-[92vh] flex flex-col glow-gold">
+      
+      <div id="final-icon" class="text-4xl sm:text-5xl">🏆</div>
+
+      <h2 id="final-title" class="text-2xl sm:text-3xl font-black font-arcade text-amber-400">
+        QUIZ COMPLETED!
+      </h2>
+
+      <!-- Candidate Verification Box -->
+      <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left text-xs grid grid-cols-2 gap-2">
+        <div>
+          <span class="text-slate-400 uppercase font-bold block text-[10px] font-hud">Contestant Name</span>
+          <strong id="final-name" class="text-amber-300 text-sm font-game">Salim Al-Harthy</strong>
+        </div>
+        <div>
+          <span class="text-slate-400 uppercase font-bold block text-[10px] font-hud">Assigned Group</span>
+          <strong id="final-group" class="text-cyan-300 text-sm font-game">Group 14</strong>
+        </div>
+        <div class="col-span-2 pt-1 border-t border-slate-800 text-slate-400 text-[10px]">
+          Academic Designer & Resource Person: <strong class="text-amber-300 font-semibold">Muhammad Shahzad</strong>
+        </div>
+      </div>
+
+      <!-- Stat Badges -->
+      <div class="grid grid-cols-3 gap-2 text-left">
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block font-hud">Final Score</span>
+          <p id="final-score" class="text-lg sm:text-2xl font-black font-hud text-amber-400">0 pts</p>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block font-hud">Win Rate</span>
+          <p id="final-accuracy" class="text-lg sm:text-2xl font-black font-hud text-emerald-400">0%</p>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-[9px] uppercase font-bold text-slate-400 block font-hud">Completed Qs</span>
+          <p id="final-correct-count" class="text-lg sm:text-2xl font-black font-hud text-cyan-400">0 / 30</p>
+        </div>
+      </div>
+
+      <!-- Phase Breakdown Summary -->
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-left text-xs space-y-1.5">
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-hud">3-Phase Breakdown (10 Qs Each):</span>
+        <div class="flex items-center justify-between text-slate-300" id="final-summary-p1">
+          <span>Phase 1: Context Gap-Fill</span>
+          <strong class="text-cyan-400 font-bold">0 pts</strong>
+        </div>
+        <div class="flex items-center justify-between text-slate-300" id="final-summary-p2">
+          <span>Phase 2: Visual Concept Matching</span>
+          <strong class="text-amber-400 font-bold">0 pts</strong>
+        </div>
+        <div class="flex items-center justify-between text-slate-300" id="final-summary-p3">
+          <span>Phase 3: Synonyms & Antonyms</span>
+          <strong class="text-emerald-400 font-bold">0 pts</strong>
+        </div>
+      </div>
+
+      <!-- Performance Feedback Text -->
+      <div id="final-outcome-box" class="p-3 rounded-xl border text-xs font-bold text-left"></div>
+
+      <!-- Itemized Log -->
+      <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left text-xs overflow-y-auto max-h-36 pr-1 space-y-1.5" id="final-questions-log">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="flex items-center gap-2.5 pt-1">
+        <button onclick="window.print()" class="w-1/2 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm rounded-xl transition font-hud">
+          🖨️ Print Performance Sheet
+        </button>
+        <button onclick="restartQuizShow()" class="w-1/2 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition font-hud">
+          PLAY AGAIN ↺
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 10 Target Academic Words across 3 Sequential Phases
+    // PHASE 1: Sentence Context Gap-Fill (10 Questions)
+    const phase1Database = [
+      {
+        word: "objective",
+        prompt: "A judge or scientist must remain completely ________, making decisions based on facts rather than personal feelings.",
+        hint: "Context: Impartial, unbiased, and not influenced by personal emotions or beliefs",
+        distractors: ["spiritual", "official", "vital"]
+      },
+      {
+        word: "comfort",
+        prompt: "A hospital patient needs emotional and physical ________ to help them recover quickly from surgery.",
+        hint: "Context: A state of ease, physical relief, and freedom from pain or anxiety",
+        distractors: ["landmark", "objective", "awareness"]
+      },
+      {
+        word: "renewable",
+        prompt: "Solar panels and wind turbines produce clean, ________ energy that will never run out.",
+        hint: "Context: Natural resources that can be replenished naturally and sustainably over time",
+        distractors: ["ecological", "vital", "enriching"]
+      },
+      {
+        word: "ecological",
+        prompt: "Oil spills cause severe ________ damage to marine life and coastal coral reefs.",
+        hint: "Context: Relating to the environment and the relationships between living organisms",
+        distractors: ["renewable", "official", "spiritual"]
+      },
+      {
+        word: "vital",
+        prompt: "Drinking clean water and getting proper sleep are ________ for human health and daily survival.",
+        hint: "Context: Extremely important, essential, or necessary for life",
+        distractors: ["comfort", "enriching", "landmark"]
+      },
+      {
+        word: "awareness",
+        prompt: "The Ministry launched a campaign to raise public ________ about traffic safety and seatbelt use.",
+        hint: "Context: Knowledge, understanding, or conscious perception of a situation or fact",
+        distractors: ["objective", "comfort", "vital"]
+      },
+      {
+        word: "landmark",
+        prompt: "Sultan Qaboos Grand Mosque in Muscat is a famous cultural and architectural ________ in Oman.",
+        hint: "Context: A well-known recognizable building, monument, or feature that marks a place",
+        distractors: ["spiritual", "ecological", "renewable"]
+      },
+      {
+        word: "spiritual",
+        prompt: "Visiting holy shrines and praying provides deep ________ peace for people around the world.",
+        hint: "Context: Relating to the human spirit, religion, or soul as opposed to material things",
+        distractors: ["official", "objective", "landmark"]
+      },
+      {
+        word: "enriching",
+        prompt: "Reading academic books and studying abroad is an ________ experience that broadens a student's mind.",
+        hint: "Context: Improving the quality, value, knowledge, or depth of an experience",
+        distractors: ["renewable", "ecological", "comfort"]
+      },
+      {
+        word: "official",
+        prompt: "You must show an ________ passport or government ID card to pass through airport customs.",
+        hint: "Context: Authorized, formal, or approved by an established authority or government",
+        distractors: ["spiritual", "vital", "awareness"]
+      }
+    ];
+
+    // PHASE 2: Visual Concept / Image Matching (10 Questions with Inline SVG Visuals)
+    const phase2Database = [
+      {
+        word: "renewable",
+        prompt: "Which target academic word best matches this clean solar and wind power generation image?",
+        hint: "Look at the wind turbine and sun rays producing clean sustainable energy",
+        distractors: ["ecological", "comfort", "official"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#082f49" stroke="#38bdf8" stroke-width="2"/>
+          <circle cx="26" cy="28" r="10" fill="#facc15" stroke="#eab308" stroke-width="1.5"/>
+          <line x1="26" y1="12" x2="26" y2="6" stroke="#facc15" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="10" y1="28" x2="4" y2="28" stroke="#facc15" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="15" y1="17" x2="10" y2="12" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>
+          <!-- Wind Turbine -->
+          <line x1="62" y1="46" x2="62" y2="82" stroke="#e0f2fe" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="62" cy="46" r="3.5" fill="#38bdf8"/>
+          <!-- Blades -->
+          <line x1="62" y1="46" x2="62" y2="24" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="62" y1="46" x2="81" y2="57" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="62" y1="46" x2="43" y2="57" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M15,82 Q50,74 85,82" stroke="#22c55e" stroke-width="3" fill="none"/>
+        </svg>`
+      },
+      {
+        word: "landmark",
+        prompt: "Which word represents this famous, recognizable architectural monument that identifies a country or city?",
+        hint: "A famous historic monument or prominent dome tower",
+        distractors: ["objective", "awareness", "spiritual"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#1e1b4b" stroke="#f59e0b" stroke-width="2"/>
+          <!-- Minaret / Monument Dome -->
+          <rect x="42" y="44" width="16" height="38" fill="#fbbf24" rx="1"/>
+          <path d="M42,44 Q50,22 58,44 Z" fill="#f59e0b"/>
+          <line x1="50" y1="22" x2="50" y2="15" stroke="#fef08a" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="50" cy="14" r="2" fill="#fef08a"/>
+          <!-- Side Pillars -->
+          <rect x="25" y="52" width="8" height="30" fill="#d97706" rx="1"/>
+          <path d="M25,52 Q29,40 33,52 Z" fill="#b45309"/>
+          <rect x="67" y="52" width="8" height="30" fill="#d97706" rx="1"/>
+          <path d="M67,52 Q71,40 75,52 Z" fill="#b45309"/>
+          <rect x="18" y="82" width="64" height="5" fill="#78350f" rx="1"/>
+        </svg>`
+      },
+      {
+        word: "comfort",
+        prompt: "Which academic word matches this warm cup of tea and cozy, relaxing armchair of physical relief?",
+        hint: "A feeling of physical relief, rest, and soothing peace",
+        distractors: ["vital", "enriching", "landmark"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#431407" stroke="#f97316" stroke-width="2"/>
+          <!-- Armchair -->
+          <path d="M28,45 C28,35 72,35 72,45 L72,68 C72,72 68,75 64,75 L36,75 C32,75 28,72 28,68 Z" fill="#ea580c"/>
+          <rect x="20" y="52" width="10" height="20" rx="4" fill="#c2410c"/>
+          <rect x="70" y="52" width="10" height="20" rx="4" fill="#c2410c"/>
+          <rect x="32" y="60" width="36" height="12" rx="3" fill="#fdba74"/>
+          <!-- Legs -->
+          <line x1="28" y1="75" x2="24" y2="84" stroke="#7c2d12" stroke-width="3" stroke-linecap="round"/>
+          <line x1="72" y1="75" x2="76" y2="84" stroke="#7c2d12" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        word: "vital",
+        prompt: "Which word represents this beating heart and medical ECG pulse monitor essential for life?",
+        hint: "Crucial, indispensable, and necessary for survival",
+        distractors: ["official", "objective", "renewable"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+          <!-- Heart -->
+          <path d="M50,34 C44,22 28,24 28,38 C28,52 50,72 50,72 C50,72 72,52 72,38 C72,24 56,22 50,34 Z" fill="#dc2626"/>
+          <!-- ECG Pulse Line -->
+          <path d="M18,52 L36,52 L42,40 L48,64 L54,46 L60,55 L64,52 L82,52" stroke="#fef08a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`
+      },
+      {
+        word: "ecological",
+        prompt: "Which word matches this green leaf and living Earth environmental relationship symbol?",
+        hint: "Relating to natural living ecosystems, biodiversity, and the environment",
+        distractors: ["spiritual", "comfort", "vital"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#052e16" stroke="#22c55e" stroke-width="2"/>
+          <!-- Sprouting Leaf & Planet -->
+          <circle cx="50" cy="54" r="24" fill="#047857" stroke="#10b981" stroke-width="1.5"/>
+          <path d="M50,22 C64,24 74,40 50,56 C26,40 36,24 50,22 Z" fill="#4ade80"/>
+          <line x1="50" y1="24" x2="50" y2="54" stroke="#15803d" stroke-width="2"/>
+          <path d="M40,54 Q50,46 60,54" stroke="#86efac" stroke-width="2" fill="none"/>
+        </svg>`
+      },
+      {
+        word: "objective",
+        prompt: "Which word represents this balanced, impartial scales of justice weighing facts without bias?",
+        hint: "Unbiased, neutral, and based strictly on evidence and logic",
+        distractors: ["awareness", "enriching", "official"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#0f172a" stroke="#cbd5e1" stroke-width="2"/>
+          <!-- Scales of Justice -->
+          <line x1="50" y1="22" x2="50" y2="78" stroke="#94a3b8" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="26" y1="36" x2="74" y2="36" stroke="#94a3b8" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="50" cy="22" r="3.5" fill="#e2e8f0"/>
+          <!-- Left Pan -->
+          <line x1="26" y1="36" x2="20" y2="52" stroke="#64748b" stroke-width="1.5"/>
+          <line x1="26" y1="36" x2="32" y2="52" stroke="#64748b" stroke-width="1.5"/>
+          <path d="M18,52 Q26,60 34,52 Z" fill="#38bdf8"/>
+          <!-- Right Pan -->
+          <line x1="74" y1="36" x2="68" y2="52" stroke="#64748b" stroke-width="1.5"/>
+          <line x1="74" y1="36" x2="80" y2="52" stroke="#64748b" stroke-width="1.5"/>
+          <path d="M66,52 Q74,60 82,52 Z" fill="#38bdf8"/>
+          <!-- Base -->
+          <rect x="36" y="78" width="28" height="6" fill="#64748b" rx="2"/>
+        </svg>`
+      },
+      {
+        word: "official",
+        prompt: "Which word represents this stamped, authorized government diploma or legal certificate with a golden seal?",
+        hint: "Authorized, formal, and certified by legal government authority",
+        distractors: ["landmark", "renewable", "comfort"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+          <!-- Certificate Document -->
+          <rect x="28" y="20" width="44" height="60" rx="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+          <line x1="36" y1="32" x2="64" y2="32" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="36" y1="42" x2="64" y2="42" stroke="#64748b" stroke-width="1.5"/>
+          <line x1="36" y1="50" x2="56" y2="50" stroke="#64748b" stroke-width="1.5"/>
+          <!-- Gold Seal Ribbon -->
+          <circle cx="58" cy="62" r="8" fill="#eab308" stroke="#ca8a04" stroke-width="1.5"/>
+          <polygon points="54,68 54,78 58,74 62,78 62,68" fill="#dc2626"/>
+        </svg>`
+      },
+      {
+        word: "spiritual",
+        prompt: "Which word represents this peaceful person meditating in deep soul serenity and inner faith?",
+        hint: "Relating to the soul, religious faith, and inner sacred calm",
+        distractors: ["ecological", "vital", "objective"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#2e1065" stroke="#c084fc" stroke-width="2"/>
+          <!-- Meditating Soul Silhouette -->
+          <circle cx="50" cy="32" r="7" fill="#e9d5ff"/>
+          <path d="M42,44 C42,40 58,40 58,44 L62,58 L68,66 C68,70 62,72 50,72 C38,72 32,70 32,66 L38,58 Z" fill="#a855f7"/>
+          <!-- Lotus Base -->
+          <path d="M50,70 C40,64 34,74 34,74 C42,76 50,78 50,78 C50,78 58,76 66,74 C66,74 60,64 50,70 Z" fill="#e879f9"/>
+          <!-- Halo Aura -->
+          <circle cx="50" cy="32" r="13" stroke="#f0abfc" stroke-width="1.5" fill="none" stroke-dasharray="2 3"/>
+        </svg>`
+      },
+      {
+        word: "awareness",
+        prompt: "Which word represents this illuminated lightbulb and wide-open eye representing public consciousness?",
+        hint: "Conscious perception, alertness, and broad knowledge of truth",
+        distractors: ["official", "spiritual", "comfort"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#172554" stroke="#60a5fa" stroke-width="2"/>
+          <!-- Eye of Consciousness -->
+          <path d="M22,50 Q50,26 78,50 Q50,74 22,50 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5"/>
+          <circle cx="50" cy="50" r="11" fill="#38bdf8"/>
+          <circle cx="50" cy="50" r="5" fill="#0f172a"/>
+          <circle cx="52" cy="48" r="1.8" fill="#ffffff"/>
+          <!-- Light Rays Above -->
+          <line x1="50" y1="20" x2="50" y2="12" stroke="#facc15" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="36" y1="24" x2="30" y2="18" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>
+          <line x1="64" y1="24" x2="70" y2="18" stroke="#facc15" stroke-width="2" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        word: "enriching",
+        prompt: "Which word represents this open academic book with sprouted leaves and stars expanding a student's mind?",
+        hint: "Deepening the quality, value, knowledge, and intellectual power of an experience",
+        distractors: ["landmark", "renewable", "vital"],
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="46" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
+          <!-- Open Book with Growth -->
+          <path d="M24,68 Q50,60 50,42 L50,70 Q50,74 24,78 Z" fill="#dcfce7"/>
+          <path d="M76,68 Q50,60 50,42 L50,70 Q50,74 76,78 Z" fill="#bbf7d0"/>
+          <!-- Sprouting Golden Stars & Sprout -->
+          <path d="M50,40 Q44,28 50,22 Q56,28 50,40 Z" fill="#facc15"/>
+          <circle cx="36" cy="30" r="2.5" fill="#fde047"/>
+          <circle cx="64" cy="30" r="2.5" fill="#fde047"/>
+          <circle cx="50" cy="16" r="3" fill="#facc15"/>
+        </svg>`
+      }
+    ];
+
+    // PHASE 3: Synonyms & Antonyms (10 Questions: 5 Synonyms, 5 Antonyms)
+    const phase3Database = [
+      {
+        word: "objective",
+        prompt: "Find the exact SYNONYM of: 'UNBIASED / IMPARTIAL' (making decisions strictly on facts).",
+        hint: "Synonym of: Fair, neutral, detached from feelings",
+        distractors: ["spiritual", "official", "vital"]
+      },
+      {
+        word: "comfort",
+        prompt: "Find the exact ANTONYM (OPPOSITE) of: 'PAIN / PHYSICAL AGONY / DISTRESS'.",
+        hint: "Opposite of: Suffering, hardship, and anxiety",
+        distractors: ["awareness", "landmark", "objective"]
+      },
+      {
+        word: "renewable",
+        prompt: "Find the exact ANTONYM (OPPOSITE) of: 'DEPLETABLE / FINITE / NON-REUSABLE'.",
+        hint: "Opposite of: Exhaustible resources like coal or oil",
+        distractors: ["ecological", "vital", "enriching"]
+      },
+      {
+        word: "ecological",
+        prompt: "Find the exact SYNONYM of: 'ENVIRONMENTAL' (relating to living ecosystems).",
+        hint: "Synonym of: Environmental, biological, nature-based",
+        distractors: ["renewable", "spiritual", "official"]
+      },
+      {
+        word: "vital",
+        prompt: "Find the exact SYNONYM of: 'CRUCIAL / ESSENTIAL / INDISPENSABLE'.",
+        hint: "Synonym of: Extremely necessary for life",
+        distractors: ["comfort", "enriching", "landmark"]
+      },
+      {
+        word: "awareness",
+        prompt: "Find the exact ANTONYM (OPPOSITE) of: 'IGNORANCE / UNCONSCIOUSNESS'.",
+        hint: "Opposite of: Lack of knowledge or being in the dark",
+        distractors: ["objective", "comfort", "vital"]
+      },
+      {
+        word: "landmark",
+        prompt: "Find the exact SYNONYM of: 'MONUMENT / HISTORIC BEACON / MILESTONE'.",
+        hint: "Synonym of: Recognizable cultural structure or building",
+        distractors: ["spiritual", "ecological", "renewable"]
+      },
+      {
+        word: "spiritual",
+        prompt: "Find the exact ANTONYM (OPPOSITE) of: 'MATERIALISTIC / PHYSICAL / SECULAR'.",
+        hint: "Opposite of: Worldly, physical money and goods",
+        distractors: ["official", "objective", "landmark"]
+      },
+      {
+        word: "enriching",
+        prompt: "Find the exact SYNONYM of: 'REWARDING / MIND-BROADENING / BENEFICIAL'.",
+        hint: "Synonym of: Improving quality, depth, and value",
+        distractors: ["renewable", "ecological", "comfort"]
+      },
+      {
+        word: "official",
+        prompt: "Find the exact ANTONYM (OPPOSITE) of: 'UNAUTHORIZED / INFORMAL / FAKE'.",
+        hint: "Opposite of: Unapproved, counterfeit, or informal",
+        distractors: ["spiritual", "vital", "awareness"]
+      }
+    ];
+
+    // State Variables
+    let contestantName = "Contestant";
+    let contestantGroup = "Group 1";
+    let currentPhase = 1; // Phase 1: Context, Phase 2: Images, Phase 3: Synonyms/Antonyms
+    let currentIndex = 0;
+    let score = 0;
+    let phaseScores = { 1: 0, 2: 0, 3: 0 };
+    let streak = 0;
+    let lives = 3;
+    let isQuestionActive = false;
+    let questionHistory = [];
+    let currentShuffledOptions = [];
+    let currentActiveDatabase = [];
+    let audioEnabled = true;
+
+    // Timer Variables
+    let maxQuestionTime = 25;
+    let currentTimerVal = 25;
+    let timerInterval = null;
+
+    // Web Audio Synthesizer (No external audio files required)
+    let audioCtx = null;
+    function initWebAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, dur, type = 'sine', vol = 0.25) {
+      if (!audioEnabled) return;
+      initWebAudio();
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    function soundWinBuzzer() {
+      initWebAudio();
+      playTone(523.25, 0.1, 'sine', 0.25); // C5
+      setTimeout(() => playTone(659.25, 0.1, 'sine', 0.25), 90); // E5
+      setTimeout(() => playTone(783.99, 0.12, 'sine', 0.3), 180); // G5
+      setTimeout(() => playTone(1046.50, 0.3, 'triangle', 0.35), 280); // C6 Win
+    }
+
+    function soundLoseBuzzer() {
+      initWebAudio();
+      playTone(220, 0.15, 'sawtooth', 0.35);
+      setTimeout(() => playTone(146.83, 0.35, 'sawtooth', 0.4), 130);
+    }
+
+    function soundTick() {
+      playTone(850, 0.04, 'sine', 0.08);
+    }
+
+    function soundFanfare() {
+      initWebAudio();
+      playTone(440, 0.1, 'triangle', 0.3);
+      setTimeout(() => playTone(554.37, 0.1, 'triangle', 0.3), 110);
+      setTimeout(() => playTone(659.25, 0.15, 'triangle', 0.35), 220);
+      setTimeout(() => playTone(880, 0.4, 'sine', 0.4), 330);
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('audio-toggle-icon').textContent = audioEnabled ? '🔊 Sound ON' : '🔇 Sound OFF';
+    }
+
+    function setTimerPacing(seconds, btn) {
+      maxQuestionTime = seconds;
+      document.querySelectorAll('.pacing-btn').forEach(b => {
+        b.className = 'pacing-btn py-2 bg-slate-950 hover:bg-slate-800 rounded-xl border border-slate-700 font-bold text-slate-300 transition';
+      });
+      if (btn) {
+        btn.className = 'pacing-btn py-2 bg-amber-500/20 border-amber-400 text-amber-300 rounded-xl border font-bold transition';
+      }
+    }
+
+    function startQuizShow() {
+      const nameInput = document.getElementById('input-contestant-name');
+      const groupInput = document.getElementById('input-contestant-group');
+      const nameVal = nameInput.value.trim();
+      const groupVal = groupInput.value.trim();
+
+      if (!nameVal || !groupVal) {
+        document.getElementById('reg-warning').classList.remove('hidden');
+        if (!nameVal) nameInput.focus();
+        else groupInput.focus();
+        return;
+      }
+
+      document.getElementById('reg-warning').classList.add('hidden');
+      contestantName = nameVal;
+      contestantGroup = groupVal;
+
+      document.getElementById('hud-student-name').textContent = contestantName;
+      document.getElementById('hud-student-group').textContent = contestantGroup;
+      document.getElementById('final-name').textContent = contestantName;
+      document.getElementById('final-group').textContent = contestantGroup;
+
+      document.getElementById('start-modal').classList.add('hidden');
+      document.getElementById('phase-transition-modal').classList.add('hidden');
+      document.getElementById('game-over-modal').classList.add('hidden');
+
+      initWebAudio();
+      score = 0;
+      phaseScores = { 1: 0, 2: 0, 3: 0 };
+      questionHistory = [];
+
+      initializePhase(1);
+    }
+
+    function initializePhase(phaseNum) {
+      currentPhase = phaseNum;
+      currentIndex = 0;
+      streak = 0;
+      lives = 3;
+
+      const phasePill = document.getElementById('hud-phase-pill');
+      const visualContainer = document.getElementById('visual-illustration-container');
+
+      if (currentPhase === 1) {
+        currentActiveDatabase = [...phase1Database].sort(() => Math.random() - 0.5);
+        phasePill.textContent = "PHASE 1: CONTEXT GAP-FILL";
+        phasePill.className = "px-2.5 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 rounded-full text-[11px] font-bold uppercase tracking-wider font-hud";
+        visualContainer.classList.add('hidden');
+      } else if (currentPhase === 2) {
+        currentActiveDatabase = [...phase2Database].sort(() => Math.random() - 0.5);
+        phasePill.textContent = "PHASE 2: IMAGE MATCHING";
+        phasePill.className = "px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-400/50 rounded-full text-[11px] font-bold uppercase tracking-wider font-hud";
+        visualContainer.classList.remove('hidden');
+      } else if (currentPhase === 3) {
+        currentActiveDatabase = [...phase3Database].sort(() => Math.random() - 0.5);
+        phasePill.textContent = "PHASE 3: SYNONYMS & ANTONYMS";
+        phasePill.className = "px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 rounded-full text-[11px] font-bold uppercase tracking-wider font-hud";
+        visualContainer.classList.add('hidden');
+      }
+
+      loadQuestion(0);
+    }
+
+    function loadQuestion(index) {
+      if (index >= currentActiveDatabase.length) {
+        handlePhaseCompletion();
+        return;
+      }
+      if (lives <= 0) {
+        handlePhaseCompletion();
+        return;
+      }
+
+      currentIndex = index;
+      isQuestionActive = true;
+      const q = currentActiveDatabase[currentIndex];
+
+      // Update HUD
+      document.getElementById('hud-round-count').textContent = `${currentIndex + 1} / 10`;
+      document.getElementById('hud-score').textContent = score;
+      document.getElementById('hud-streak').textContent = `${streak}x`;
+      updateLivesHUD();
+
+      document.getElementById('clue-badge').textContent = `Phase ${currentPhase} • Clue ${currentIndex + 1} of 10`;
+      document.getElementById('question-prompt-text').textContent = `"${q.prompt}"`;
+      document.getElementById('sub-hint-label').textContent = q.hint;
+
+      // Handle Phase 2 Visual SVG Injection
+      const visualContainer = document.getElementById('visual-illustration-container');
+      const graphicBox = document.getElementById('illustration-graphic');
+      if (currentPhase === 2 && q.svg) {
+        visualContainer.classList.remove('hidden');
+        graphicBox.innerHTML = q.svg;
+        document.getElementById('illustration-caption').textContent = `Visual Concept #${currentIndex + 1}`;
+      } else {
+        visualContainer.classList.add('hidden');
+      }
+
+      document.getElementById('live-feedback-toast').textContent = "";
+      document.getElementById('live-feedback-toast').className = "mt-2 text-center transition-all duration-300 min-h-[28px] font-bold text-sm text-slate-400";
+
+      // Prepare 4 choices: 1 correct + 3 distractors
+      const candidates = [q.word, ...q.distractors].sort(() => Math.random() - 0.5);
+      currentShuffledOptions = candidates;
+
+      for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById(`option-btn-${i}`);
+        const label = document.getElementById(`option-label-${i}`);
+        btn.disabled = false;
+        btn.classList.remove('btn-win', 'btn-lose', 'opacity-30');
+        label.textContent = candidates[i];
+      }
+
+      startQuestionTimer();
+    }
+
+    function startQuestionTimer() {
+      clearInterval(timerInterval);
+      currentTimerVal = maxQuestionTime;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        if (!isQuestionActive) {
+          clearInterval(timerInterval);
+          return;
+        }
+
+        currentTimerVal--;
+        updateTimerDisplay();
+
+        if (currentTimerVal <= 5 && currentTimerVal > 0) {
+          soundTick();
+        }
+
+        if (currentTimerVal <= 0) {
+          clearInterval(timerInterval);
+          handleTimeout();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById('timer-sec-label').textContent = `${currentTimerVal}s`;
+      const pct = Math.max(0, (currentTimerVal / maxQuestionTime) * 100);
+      document.getElementById('countdown-progress-bar').style.width = `${pct}%`;
+    }
+
+    function handleOptionSelect(chosenIdx) {
+      if (!isQuestionActive) return;
+      isQuestionActive = false;
+      clearInterval(timerInterval);
+
+      const q = currentActiveDatabase[currentIndex];
+      const selectedWord = currentShuffledOptions[chosenIdx];
+      const isCorrect = selectedWord === q.word;
+      const clickedBtn = document.getElementById(`option-btn-${chosenIdx}`);
+
+      // Lock buttons
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`option-btn-${i}`).disabled = true;
+      }
+
+      if (isCorrect) {
+        soundWinBuzzer();
+        clickedBtn.classList.add('btn-win');
+        streak++;
+
+        // Base 100 pts + streak bonus + speed bonus
+        const speedBonus = currentTimerVal > (maxQuestionTime / 2) ? 50 : 0;
+        const streakBonus = streak > 1 ? (streak - 1) * 25 : 0;
+        const pointsEarned = 100 + speedBonus + streakBonus;
+        score += pointsEarned;
+        phaseScores[currentPhase] += pointsEarned;
+
+        document.getElementById('hud-score').textContent = score;
+        document.getElementById('hud-streak').textContent = `${streak}x`;
+
+        const toast = document.getElementById('live-feedback-toast');
+        toast.className = "mt-2 text-center transition-all duration-300 min-h-[28px] font-bold text-base text-emerald-400";
+        toast.textContent = `⭐ WIN! +${pointsEarned} PTS! Word: "${q.word}"`;
+
+        questionHistory.push({
+          phase: currentPhase,
+          num: currentIndex + 1,
+          word: q.word,
+          selected: selectedWord,
+          prompt: q.prompt,
+          wasCorrect: true,
+          pts: pointsEarned
+        });
+
+        setTimeout(() => {
+          loadQuestion(currentIndex + 1);
+        }, 1300);
+
+      } else {
+        soundLoseBuzzer();
+        clickedBtn.classList.add('btn-lose');
+        streak = 0;
+        lives--;
+        document.getElementById('hud-streak').textContent = '0x';
+        updateLivesHUD();
+
+        // Highlight correct button
+        for (let i = 0; i < 4; i++) {
+          if (currentShuffledOptions[i] === q.word) {
+            document.getElementById(`option-btn-${i}`).classList.add('btn-win');
+          }
+        }
+
+        const toast = document.getElementById('live-feedback-toast');
+        toast.className = "mt-2 text-center transition-all duration-300 min-h-[28px] font-bold text-base text-rose-400";
+        toast.textContent = `✖ LOSE! Strike lost! The correct word was "${q.word}".`;
+
+        questionHistory.push({
+          phase: currentPhase,
+          num: currentIndex + 1,
+          word: q.word,
+          selected: selectedWord,
+          prompt: q.prompt,
+          wasCorrect: false,
+          pts: 0
+        });
+
+        if (lives <= 0) {
+          setTimeout(() => {
+            handlePhaseCompletion();
+          }, 1600);
+        } else {
+          setTimeout(() => {
+            loadQuestion(currentIndex + 1);
+          }, 1600);
+        }
+      }
+    }
+
+    function handleTimeout() {
+      if (!isQuestionActive) return;
+      isQuestionActive = false;
+      soundLoseBuzzer();
+
+      const q = currentActiveDatabase[currentIndex];
+      streak = 0;
+      lives--;
+      document.getElementById('hud-streak').textContent = '0x';
+      updateLivesHUD();
+
+      for (let i = 0; i < 4; i++) {
+        const btn = document.getElementById(`option-btn-${i}`);
+        btn.disabled = true;
+        if (currentShuffledOptions[i] === q.word) {
+          btn.classList.add('btn-win');
+        }
+      }
+
+      const toast = document.getElementById('live-feedback-toast');
+      toast.className = "mt-2 text-center transition-all duration-300 min-h-[28px] font-bold text-base text-amber-400";
+      toast.textContent = `⏰ TIME EXPIRED! Strike lost! Correct answer was "${q.word}".`;
+
+      questionHistory.push({
+        phase: currentPhase,
+        num: currentIndex + 1,
+        word: q.word,
+        selected: "TIMEOUT",
+        prompt: q.prompt,
+        wasCorrect: false,
+        pts: 0
+      });
+
+      if (lives <= 0) {
+        setTimeout(() => handlePhaseCompletion(), 1600);
+      } else {
+        setTimeout(() => loadQuestion(currentIndex + 1), 1600);
+      }
+    }
+
+    function updateLivesHUD() {
+      let hearts = '';
+      for (let i = 0; i < 3; i++) {
+        hearts += i < lives ? '❤️' : '🖤';
+      }
+      document.getElementById('hud-lives').textContent = hearts;
+    }
+
+    function handlePhaseCompletion() {
+      isQuestionActive = false;
+      clearInterval(timerInterval);
+
+      const runningTotal = phaseScores[1] + phaseScores[2] + phaseScores[3];
+
+      if (currentPhase < 3) {
+        soundFanfare();
+        document.getElementById('trans-contestant-name').textContent = contestantName;
+        document.getElementById('trans-contestant-group').textContent = contestantGroup;
+        document.getElementById('trans-title').textContent = `Phase ${currentPhase} Complete!`;
+        document.getElementById('trans-phase-label').textContent = `Phase ${currentPhase} Points`;
+        document.getElementById('trans-phase-score').textContent = `${phaseScores[currentPhase]} pts`;
+        document.getElementById('trans-total-score').textContent = `${runningTotal} pts`;
+
+        if (currentPhase === 1) {
+          document.getElementById('trans-badge').textContent = 'Phase 1: In-Context Gaps Cleared!';
+          document.getElementById('trans-desc').textContent = 
+            `Sensational performance, ${contestantName}! You mastered the 10 in-context sentence items. Prepare for Phase 2: Visual Concept / Image Matching!`;
+          document.getElementById('btn-next-phase').textContent = 'START PHASE 2 (IMAGE MATCHING) ▶';
+        } else if (currentPhase === 2) {
+          document.getElementById('trans-badge').textContent = 'Phase 2: Visual Images Cleared!';
+          document.getElementById('trans-desc').textContent = 
+            `Superb visual deduction, ${contestantName}! You deciphered all visual clues. Now prepare for the final challenge: Phase 3: Synonyms & Antonyms!`;
+          document.getElementById('btn-next-phase').textContent = 'START PHASE 3 (SYNONYMS & ANTONYMS) ▶';
+        }
+
+        document.getElementById('phase-transition-modal').classList.remove('hidden');
+      } else {
+        concludeQuizShow();
+      }
+    }
+
+    function startNextPhase() {
+      document.getElementById('phase-transition-modal').classList.add('hidden');
+      initializePhase(currentPhase + 1);
+    }
+
+    function concludeQuizShow() {
+      isQuestionActive = false;
+      clearInterval(timerInterval);
+      soundFanfare();
+
+      const totalCorrect = questionHistory.filter(h => h.wasCorrect).length;
+      const totalAttempted = questionHistory.length;
+      const accuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+      const grandTotal = phaseScores[1] + phaseScores[2] + phaseScores[3];
+
+      document.getElementById('final-name').textContent = contestantName;
+      document.getElementById('final-group').textContent = contestantGroup;
+      document.getElementById('final-score').textContent = `${grandTotal} pts`;
+      document.getElementById('final-accuracy').textContent = `${accuracy}%`;
+      document.getElementById('final-correct-count').textContent = `${totalCorrect} / 30`;
+
+      document.getElementById('final-summary-p1').innerHTML = `
+        <span>Phase 1: Context Gap-Fill</span>
+        <strong class="text-cyan-400 font-bold">${phaseScores[1]} pts</strong>
+      `;
+      document.getElementById('final-summary-p2').innerHTML = `
+        <span>Phase 2: Visual Concept Matching</span>
+        <strong class="text-amber-400 font-bold">${phaseScores[2]} pts</strong>
+      `;
+      document.getElementById('final-summary-p3').innerHTML = `
+        <span>Phase 3: Synonyms & Antonyms</span>
+        <strong class="text-emerald-400 font-bold">${phaseScores[3]} pts</strong>
+      `;
+
+      const titleEl = document.getElementById('final-title');
+      const iconEl = document.getElementById('final-icon');
+      const outcomeBox = document.getElementById('final-outcome-box');
+
+      if (totalCorrect >= 22) {
+        titleEl.textContent = "GRAND CHAMPION! YOU WIN!";
+        titleEl.className = "text-2xl sm:text-3xl font-black font-arcade text-amber-400";
+        iconEl.textContent = "👑";
+        outcomeBox.className = "p-3 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 text-xs font-bold text-left";
+        outcomeBox.textContent = `🌟 Exemplary Mastery, ${contestantName}! You completed all 3 phases (Context, Visual Images, and Synonyms/Antonyms) with high academic distinction!`;
+      } else {
+        titleEl.textContent = "QUIZ CHALLENGE CONCLUDED";
+        titleEl.className = "text-2xl sm:text-3xl font-black font-arcade text-cyan-300";
+        iconEl.textContent = "🎖️";
+        outcomeBox.className = "p-3 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 text-xs font-bold text-left";
+        outcomeBox.textContent = `Good effort, ${contestantName}! You cleared the 3 phases. Review the itemized breakdown below to target 100% accuracy!`;
+      }
+
+      // Populate Review Log
+      const logContainer = document.getElementById('final-questions-log');
+      logContainer.innerHTML = `
+        <div class="text-[10px] uppercase font-bold text-slate-400 font-hud tracking-wider mb-1">
+          Complete 3-Phase Question Summary (30 Items):
+        </div>
+      `;
+
+      questionHistory.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `p-2 rounded-xl border text-[11px] ${
+          item.wasCorrect 
+            ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200" 
+            : "bg-rose-950/40 border-rose-500/40 text-rose-200"
+        }`;
+        row.innerHTML = `
+          <div class="flex justify-between items-center font-bold mb-0.5 font-hud">
+            <span>[Phase ${item.phase}] Q${item.num}: ${item.wasCorrect ? "✔ " + item.word : "✖ " + item.selected}</span>
+            <span>${item.wasCorrect ? "+" + item.pts + " pts" : "Strike Lost (Ans: " + item.word + ")"}</span>
+          </div>
+          <p class="text-[10px] text-slate-300 opacity-90">${item.prompt}</p>
+        `;
+        logContainer.appendChild(row);
+      });
+
+      document.getElementById('game-over-modal').classList.remove('hidden');
+    }
+
+    function restartQuizShow() {
+      document.getElementById('game-over-modal').classList.add('hidden');
+      document.getElementById('phase-transition-modal').classList.add('hidden');
+      document.getElementById('start-modal').classList.remove('hidden');
+    }
+
+    // Auto audio resume on interaction
+    window.addEventListener('click', initWebAudio, { once: false });
+    window.addEventListener('touchstart', initWebAudio, { once: false });
+  </script>
+</body>
+</html>
